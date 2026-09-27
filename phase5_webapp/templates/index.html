@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StegoLab — Interactive Steganography Studio</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="glow-bg"></div>
+  
+  <div class="app-shell">
+    <!-- TOP NAVBAR -->
+    <header class="navbar">
+      <div class="nav-brand">
+        <div class="brand-badge">
+          <span class="dot-r"></span>
+          <span class="dot-g"></span>
+          <span class="dot-b"></span>
+        </div>
+        <div>
+          <h1 class="brand-title">Stego<span>Lab</span></h1>
+          <p class="brand-tagline">Image Steganography &amp; Steganalysis Research Studio</p>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <div class="status-badge"><span class="pulse-dot"></span> 3 Algorithms Active</div>
+        <a href="#quick-guide" class="nav-link-btn" onclick="toggleHelpModal(true)">📖 Quick Guide</a>
+      </div>
+    </header>
+
+    <!-- ALGORITHM SELECTOR -->
+    <section class="algo-bar">
+      <button class="algo-card active" onclick="setAlgo('lsb', this)">
+        <div class="algo-card-head">
+          <span class="algo-id">ALGO 01</span>
+          <span class="algo-badge basic">Basic</span>
+        </div>
+        <div class="algo-name">Basic LSB</div>
+        <div class="algo-meta">Sequential 1-Bit Embedding</div>
+      </button>
+
+      <button class="algo-card" onclick="setAlgo('rlsb', this)">
+        <div class="algo-card-head">
+          <span class="algo-id">ALGO 02</span>
+          <span class="algo-badge keyed">Key-Secured</span>
+        </div>
+        <div class="algo-name">Randomized LSB</div>
+        <div class="algo-meta">Fisher-Yates Shuffled Positions</div>
+      </button>
+
+      <button class="algo-card" onclick="setAlgo('edge', this)">
+        <div class="algo-card-head">
+          <span class="algo-id">ALGO 03</span>
+          <span class="algo-badge adaptive">Adaptive</span>
+        </div>
+        <div class="algo-name">Edge-Adaptive</div>
+        <div class="algo-meta">1–3 Bit Local Variance Depth</div>
+      </button>
+    </section>
+
+    <!-- METRICS RIBBON -->
+    <section class="metrics-ribbon">
+      <div class="metric-card">
+        <span class="metric-label">Cover Resolution</span>
+        <span class="metric-val" id="stat-res">—</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Payload Size</span>
+        <span class="metric-val" id="stat-msg">—</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Bits Embedded</span>
+        <span class="metric-val" id="stat-bits">—</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Channels Changed</span>
+        <span class="metric-val" id="stat-changes">—</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Capacity Utilized</span>
+        <span class="metric-val highlight" id="stat-use">—</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Quality (PSNR)</span>
+        <span class="metric-val psnr" id="stat-psnr">—</span>
+      </div>
+    </section>
+
+    <!-- WORKSPACE GRID -->
+    <main class="workspace-grid">
+      <!-- LEFT CONTROLS PANEL -->
+      <section class="control-panel">
+        <div class="panel-header">
+          <h2 class="panel-title">Operation Controls</h2>
+          <div class="mode-switch">
+            <button class="mode-btn active" id="btnModeEncode" onclick="setMode('encode')">Encode</button>
+            <button class="mode-btn" id="btnModeDecode" onclick="setMode('decode')">Decode</button>
+          </div>
+        </div>
+
+        <div class="panel-body">
+          <!-- Active Algorithm Description Card -->
+          <div class="info-card" id="algoInfoCard">
+            <div class="info-card-header">
+              <span class="info-icon">⚡</span>
+              <strong id="activeAlgoTitle">Basic LSB</strong>
+            </div>
+            <p id="activeAlgoDesc">Sequential least significant bit embedding. Straightforward, standard implementation.</p>
+          </div>
+
+          <!-- Image Upload / Sample Selection -->
+          <div class="form-group">
+            <div class="label-row">
+              <label class="form-label">Cover / Stego Image</label>
+              <div class="sample-btn-group">
+                <button type="button" class="btn-sm" onclick="loadSample('sample')">Load Sample 1</button>
+                <button type="button" class="btn-sm" onclick="loadSample('bike')">Load Sample 2</button>
+              </div>
+            </div>
+
+            <div class="dropzone" id="dropZone">
+              <input type="file" id="fileInput" accept="image/png,image/jpeg,image/bmp,image/webp" onchange="onFileSelected(event)">
+              <div class="dropzone-inner" id="dropzoneContent">
+                <div class="drop-icon">🖼️</div>
+                <div class="drop-text"><strong>Click to browse</strong> or drag &amp; drop image here</div>
+                <div class="drop-hint">Supports PNG, JPG, BMP, WebP (Max 32MB)</div>
+              </div>
+              <div class="preview-box" id="previewBox" style="display:none;">
+                <img id="imagePreview" alt="Image preview">
+                <button type="button" class="btn-remove-img" onclick="removeImage(event)" title="Remove image">✕</button>
+              </div>
+            </div>
+
+            <div class="image-meta-bar" id="imageMetaBar" style="display:none;">
+              <span>Dims: <strong id="metaDim">—</strong></span>
+              <span>Pixels: <strong id="metaPx">—</strong></span>
+              <span>Format: <strong id="metaFmt">—</strong></span>
+            </div>
+          </div>
+
+          <!-- Encode Fields -->
+          <div id="encodeFields">
+            <div class="form-group">
+              <label class="form-label" for="inputMessage">Secret Message (Plaintext / Unicode / Emojis)</label>
+              <textarea id="inputMessage" rows="3" placeholder="Type your secret message to conceal..." oninput="updateCapacityGauge()"></textarea>
+              
+              <div class="capacity-gauge-wrap">
+                <div class="capacity-bar-track">
+                  <div class="capacity-bar-fill" id="capacityFill"></div>
+                </div>
+                <div class="capacity-stats">
+                  <span id="capacityLabel">Upload an image to compute capacity</span>
+                  <span id="capacityPct">0%</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group" id="keyGroupEncode">
+              <label class="form-label" for="inputKey">Secret Key / Passphrase <span class="key-badge">Cryptographic Seed</span></label>
+              <div class="input-with-icon">
+                <span class="input-icon">🔑</span>
+                <input type="text" id="inputKey" value="stego2024" placeholder="Enter key (e.g., mySecretKey99)">
+              </div>
+            </div>
+
+            <button type="button" class="btn-primary" id="btnExecuteEncode" onclick="runEncode()" disabled>
+              <span class="btn-icon">⚡</span> Execute Steganography Encoding
+            </button>
+            <button type="button" class="btn-success" id="btnDownloadResult" onclick="downloadResultImage()" style="display:none;">
+              <span class="btn-icon">⬇</span> Download Stego PNG
+            </button>
+          </div>
+
+          <!-- Decode Fields -->
+          <div id="decodeFields" style="display:none;">
+            <div class="form-group" id="keyGroupDecode">
+              <label class="form-label" for="inputKeyDecode">Secret Key / Passphrase</label>
+              <div class="input-with-icon">
+                <span class="input-icon">🔑</span>
+                <input type="text" id="inputKeyDecode" value="stego2024" placeholder="Enter matching secret key">
+              </div>
+              <small class="form-hint">Must match the key used during encoding for Randomized LSB mode.</small>
+            </div>
+
+            <button type="button" class="btn-primary" id="btnExecuteDecode" onclick="runDecode()" disabled>
+              <span class="btn-icon">🔍</span> Extract &amp; Decode Secret Message
+            </button>
+          </div>
+
+          <!-- Loading Spinner -->
+          <div class="loading-overlay" id="loadingOverlay" style="display:none;">
+            <div class="spinner-ring"></div>
+            <span id="loadingMsg">Processing Image Matrix…</span>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- RIGHT VISUALIZATION & OUTPUT STUDIO -->
+      <section class="viz-panel">
+        <div class="viz-header">
+          <nav class="viz-nav">
+            <button class="viz-tab active" onclick="switchTab('log', this)">
+              <span class="tab-icon">📋</span> Process Log
+            </button>
+            <button class="viz-tab" onclick="switchTab('text', this)">
+              <span class="tab-icon">🔢</span> Text → Binary
+            </button>
+            <button class="viz-tab" onclick="switchTab('matrix', this)">
+              <span class="tab-icon">🗂️</span> Pixel Matrix
+            </button>
+            <button class="viz-tab" onclick="switchTab('changes', this)">
+              <span class="tab-icon">⚡</span> Bit Changes
+            </button>
+            <button class="viz-tab" onclick="switchTab('output', this)">
+              <span class="tab-icon">🖼️</span> Output Studio
+            </button>
+          </nav>
+        </div>
+
+        <div class="viz-body">
+          <!-- PROCESS LOG TAB -->
+          <div class="viz-pane active" id="pane-log">
+            <div class="pane-empty-state" id="logEmptyState">
+              <div class="empty-icon">⚙️</div>
+              <h3>No Operations Performed Yet</h3>
+              <p>Select an algorithm, upload or load a sample image, and run Encode or Decode to see step-by-step logs.</p>
+            </div>
+            <div class="log-stream" id="logStream" style="display:none;"></div>
+          </div>
+
+          <!-- TEXT -> BINARY TAB -->
+          <div class="viz-pane" id="pane-text">
+            <div class="pane-empty-state" id="textEmptyState">
+              <div class="empty-icon">01</div>
+              <h3>Character Bit-Stream Breakdown</h3>
+              <p>Execute an encoding or decoding process to view byte values, ASCII/Unicode representation, and 8-bit registers.</p>
+            </div>
+            <div class="table-container" id="textTableContainer" style="display:none;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Char / Symbol</th>
+                    <th>Byte (Decimal)</th>
+                    <th>Binary (8-Bit)</th>
+                    <th>Bit Visualization (MSB → LSB)</th>
+                  </tr>
+                </thead>
+                <tbody id="textTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- PIXEL MATRIX TAB -->
+          <div class="viz-pane" id="pane-matrix">
+            <div class="pane-empty-state" id="matrixEmptyState">
+              <div class="empty-icon">🗂️</div>
+              <h3>RGB Matrix Inspector</h3>
+              <p>Displays original vs stego pixel RGB values side-by-side with changed bits highlighted in real-time.</p>
+            </div>
+            <div class="table-container" id="matrixTableContainer" style="display:none;">
+              <div class="table-caption" id="matrixCaption"></div>
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Index</th>
+                    <th>Row</th>
+                    <th>Col</th>
+                    <th>Orig [R, G, B]</th>
+                    <th>Stego [R, G, B]</th>
+                    <th>Red Binary (Orig → Stego)</th>
+                    <th>Green Binary (Orig → Stego)</th>
+                    <th>Blue Binary (Orig → Stego)</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="matrixTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- BIT CHANGES TAB -->
+          <div class="viz-pane" id="pane-changes">
+            <div class="pane-empty-state" id="changesEmptyState">
+              <div class="empty-icon">⚡</div>
+              <h3>Granular Channel Modifications</h3>
+              <p>Displays all individual modified channel bytes, diff metrics, and embedded bit values.</p>
+            </div>
+            <div class="table-container" id="changesTableContainer" style="display:none;">
+              <div class="table-caption" id="changesCaption"></div>
+              <table class="data-table" id="changesTable">
+                <thead id="changesTableHead">
+                  <tr>
+                    <th>Pixel #</th>
+                    <th>Row</th>
+                    <th>Col</th>
+                    <th>Channel</th>
+                    <th>Old Value</th>
+                    <th>New Value</th>
+                    <th>Diff</th>
+                    <th>Old Binary</th>
+                    <th>New Binary</th>
+                    <th>Bit(s) Embedded</th>
+                  </tr>
+                </thead>
+                <tbody id="changesTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- OUTPUT STUDIO TAB -->
+          <div class="viz-pane" id="pane-output">
+            <div class="pane-empty-state" id="outputEmptyState">
+              <div class="empty-icon">🖼️</div>
+              <h3>Stego Image &amp; Decoded Output</h3>
+              <p>Resulting stego images and recovered secret payloads will appear here upon completion.</p>
+            </div>
+            <div class="output-studio" id="outputStudio" style="display:none;">
+              <!-- Stego Image Result Box -->
+              <div class="output-card" id="stegoImgCard" style="display:none;">
+                <div class="card-title">Generated Stego Image (Lossless PNG)</div>
+                <div class="img-display-wrap">
+                  <img id="resultImagePreview" alt="Stego Output">
+                </div>
+                <div class="btn-group-row">
+                  <button type="button" class="btn-secondary" onclick="downloadResultImage()">⬇ Download Image</button>
+                  <button type="button" class="btn-secondary" onclick="useResultAsInput()">🔄 Use as Decode Input</button>
+                </div>
+              </div>
+
+              <!-- Decoded Result Box -->
+              <div class="output-card" id="decodedMsgCard" style="display:none;">
+                <div class="card-title">Recovered Secret Message</div>
+                <div class="decoded-box" id="decodedMessageBox"></div>
+                <div class="decoded-meta" id="decodedMetaStats"></div>
+                <button type="button" class="btn-secondary" onclick="copyDecodedMessage()">📋 Copy Message to Clipboard</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="app-footer">
+      <div>StegoLab Research Framework · Open Source Project</div>
+      <div>Python 3.12 · Flask REST Backend · Lossless RGB Engine</div>
+    </footer>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div class="toast" id="appToast"></div>
+
+  <!-- HELP MODAL -->
+  <div class="modal-overlay" id="helpModal" style="display:none;" onclick="toggleHelpModal(false)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>📖 StegoLab Quick Start &amp; Architecture</h3>
+        <button class="modal-close" onclick="toggleHelpModal(false)">✕</button>
+      </div>
+      <div class="modal-body">
+        <h4>Overview</h4>
+        <p>StegoLab is a modular image steganography research environment implementing 3 algorithms with varying levels of security and complexity.</p>
+        
+        <h4>Algorithms</h4>
+        <ul>
+          <li><strong>Algorithm 1 (Basic LSB):</strong> Sequentially modifies least significant bits. Highly efficient, deterministic.</li>
+          <li><strong>Algorithm 2 (Randomized LSB):</strong> Fisher-Yates shuffle seeded by secret key hash. Resists positional analysis.</li>
+          <li><strong>Algorithm 3 (Edge-Adaptive):</strong> Dynamically scales embedding depth (1 to 3 bits) using 3x3 local luminance variance in textured regions.</li>
+        </ul>
+
+        <h4>CLI &amp; Automated Testing</h4>
+        <pre><code>python run.py --test            # Automated verification test suite
+python run.py --port 5000       # Web application
+python -m phase1_basics.main --image phase1_basics/images/input/sample.png</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
