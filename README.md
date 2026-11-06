@@ -2,17 +2,14 @@
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.0%2B-green.svg)](https://flask.palletsprojects.com/)
-[![Course](https://img.shields.io/badge/Course-Design%20%26%20Analysis%20of%20Algorithms%20(DAA)-orange.svg)](#-academic-context--daa-course-project)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://img.shields.io/badge/Tests-Passing-brightgreen.svg)](#-testing--verification)
 
-> **Academic Project Notice:** This project was developed as a collaborative group project for the **Design and Analysis of Algorithms (DAA)** course, focusing on algorithmic complexity, spatial data structures, pseudorandom permutations, and spatial image steganography.
-
 ---
 
-## 🎓 Academic Context & DAA Highlights
+## 🎓 Algorithm Design & Complexity
 
-This project explores the design, theoretical time/space complexity analysis, and practical implementation of data-hiding algorithms:
+This project explores the design, time and space complexity, and practical implementation of data-hiding algorithms:
 
 1. **Sequential Search & Bitwise Manipulation (Basic LSB)**:
    - **Time Complexity**: $\mathcal{O}(N)$ where $N$ is the number of bits in the message payload.
@@ -185,10 +182,6 @@ python -m phase5_edge_adapt.main --mode decode --image phase5_edge_adapt/images/
 - **Format Guarantee**: All stego images are saved losslessly as **PNG** to prevent discrete cosine transform (DCT) artifacts from corrupting embedded LSB bits.
 
 ---
-
-## 👥 Group Project & Acknowledgements
-
-Developed as a group project for the **Design and Analysis of Algorithms (DAA)** curriculum. Special thanks to our course instructor and teammates for contributions toward algorithmic design, mathematical formulation, and experimental benchmarking.
 
 ---
 

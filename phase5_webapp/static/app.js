@@ -1,5 +1,5 @@
 /**
- * StegoLab — Interactive Frontend Logic
+ * StegoLab - Interactive Frontend Logic
  * Supports 3 Algorithms: Basic LSB, Randomized LSB, Edge-Adaptive
  */
 
@@ -13,21 +13,21 @@ let activeImageMetrics = { width: 0, height: 0, totalPixels: 0 };
 const ALGO_DEFINITIONS = {
   lsb: {
     title: 'Basic LSB (Least Significant Bit)',
-    desc: 'Sequentially replaces the least significant bit of each R, G, B channel byte. High capacity and fast processing, but detectable via Chi-Square and sequential statistical analysis.',
+    desc: 'Sequentially replaces the least significant bit in each color channel. Fast to process, but the sequential pattern may be detectable by statistical analysis.',
     needsKey: false,
     depthLabel: '1 bit / channel (fixed)'
   },
   rlsb: {
     title: 'Randomized LSB (Cryptographic Seed)',
-    desc: 'Uses a secret key to compute a djb2 hash seed, shuffling channel indices with the Fisher-Yates algorithm. Defeats sequential steganalysis; extraction without the key is statistically infeasible.',
+    desc: 'Uses a key-derived seed to shuffle channel positions with the Fisher-Yates algorithm. Use the same key when extracting the message.',
     needsKey: true,
     depthLabel: '1 bit / channel (shuffled)'
   },
   edge: {
     title: 'Edge-Adaptive Steganography',
-    desc: 'Calculates 3x3 local luminance variance across the image. Automatically allocates 1, 2, or 3 bits to textured and edge regions while preserving smooth areas, maximizing visual imperceptibility.',
+    desc: 'Calculates local luminance variance in a 3 by 3 neighborhood and assigns 1 to 3 bits per channel based on image texture.',
     needsKey: false,
-    depthLabel: '1–3 bits / channel (adaptive)'
+    depthLabel: '1 to 3 bits / channel (adaptive)'
   }
 };
 
@@ -91,7 +91,7 @@ function loadImageFromFile(file) {
 }
 
 async function loadSample(sampleName) {
-  showSpinner('Fetching sample image…');
+  showSpinner('Fetching sample image');
   try {
     const res = await fetch(`/api/sample/${sampleName}`);
     if (!res.ok) throw new Error('Sample not found');
@@ -144,7 +144,7 @@ function removeImage(event) {
   document.getElementById('previewBox').style.display = 'none';
   document.getElementById('dropzoneContent').style.display = 'block';
   document.getElementById('imageMetaBar').style.display = 'none';
-  document.getElementById('stat-res').textContent = '—';
+  document.getElementById('stat-res').textContent = 'Not calculated';
 
   updateActionButtons();
   updateCapacityGauge();
@@ -193,7 +193,7 @@ async function runEncode() {
     return;
   }
 
-  showSpinner('Concealing payload into image channels…');
+  showSpinner('Encoding message into image channels');
   clearVisualization();
 
   const formData = new FormData();
@@ -228,7 +228,7 @@ async function runDecode() {
   if (!activeImageFile) return;
   const key = document.getElementById('inputKeyDecode').value.trim() || 'stego2024';
 
-  showSpinner('Scanning bit planes & extracting message…');
+  showSpinner('Scanning bit planes and extracting message');
   clearVisualization();
 
   const formData = new FormData();
@@ -268,26 +268,23 @@ function renderEncodeResults(data) {
   document.getElementById('stat-bits').textContent = s.bits_embedded.toLocaleString();
   document.getElementById('stat-changes').textContent = s.channels_changed.toLocaleString();
   document.getElementById('stat-use').textContent = `${s.usage_pct}%`;
-  document.getElementById('stat-psnr').textContent = s.psnr_db ? `${s.psnr_db} dB` : '>50 dB';
+  const psnrValue = s.psnr_db != null ? `${s.psnr_db} dB` : 'Not available';
+  document.getElementById('stat-psnr').textContent = psnrValue;
 
   const logEntries = [
-    { n: '⚡', t: `Algorithm: <span class="hl-cyan">${s.algo}</span>` },
-    { n: '🖼', t: `Carrier Dimensions: <span class="hl">${s.width} × ${s.height}</span> (${s.total_pixels.toLocaleString()} pixels)` },
-    { n: '📦', t: `Total Channel Bytes: <span class="hl">${s.total_channels.toLocaleString()}</span>` },
-    { n: '—', t: `<div class="log-divider"></div>` },
-    { n: '1', t: `Payload: <span class="hl">${s.msg_length} chars</span> + 4-byte delimiter (<span class="hl">${s.bits_embedded} bits</span>)` },
-    { n: '2', t: `Modified Channels: <span class="hl-rose">${s.channels_changed.toLocaleString()}</span> channel bytes` },
-    { n: '3', t: `Modified Pixels: <span class="hl-amber">${s.pixels_changed.toLocaleString()}</span> pixels (${((s.pixels_changed/s.total_pixels)*100).toFixed(2)}%)` },
-    { n: '4', t: `Imperceptibility (PSNR): <span class="hl-green">${s.psnr_db || 52.4} dB</span> (Undetectable to human eye)` },
-    { n: '5', t: `Capacity Utilization: <span class="hl-cyan">${s.usage_pct}%</span>` },
+    { n: '01', t: `Algorithm: <span class="hl-cyan">${s.algo}</span>` },
+    { n: '02', t: `Carrier dimensions: <span class="hl">${s.width} x ${s.height}</span> (${s.total_pixels.toLocaleString()} pixels)` },
+    { n: '03', t: `Total channel bytes: <span class="hl">${s.total_channels.toLocaleString()}</span>` },
+    { n: '04', t: `Payload: <span class="hl">${s.msg_length} characters</span> + 4-byte delimiter (<span class="hl">${s.bits_embedded} bits</span>)` },
+    { n: '05', t: `Modified channels: <span class="hl-rose">${s.channels_changed.toLocaleString()}</span> channel bytes` },
+    { n: '06', t: `Modified pixels: <span class="hl-amber">${s.pixels_changed.toLocaleString()}</span> pixels (${((s.pixels_changed/s.total_pixels)*100).toFixed(2)}%)` },
+    { n: '07', t: `Measured PSNR: <span class="hl-green">${psnrValue}</span>` },
+    { n: '08', t: `Capacity utilization: <span class="hl-cyan">${s.usage_pct}%</span>` },
   ];
   if (s.key_used) {
-    logEntries.push({ n: '🔑', t: `Secret Key: <span class="hl-amber">"${s.key_used}"</span>` });
+    logEntries.push({ n: '09', t: `Secret key: <span class="hl-amber">"${s.key_used}"</span>` });
   }
-  logEntries.push(
-    { n: '—', t: `<div class="log-divider"></div>` },
-    { n: '✓', t: `<span class="hl-green">Encoding finished. Lossless stego PNG ready for download.</span>` }
-  );
+  logEntries.push({ n: 'DONE', t: '<span class="hl-green">Encoding finished. Lossless PNG is ready for download.</span>' });
   renderLogEntries(logEntries);
 
   renderTextTable(data.text_table);
@@ -309,18 +306,16 @@ function renderEncodeResults(data) {
 function renderDecodeResults(data) {
   document.getElementById('stat-msg').textContent = `${data.msg_length} chars`;
   document.getElementById('stat-bits').textContent = data.bits_read.toLocaleString();
-  document.getElementById('stat-changes').textContent = '—';
-  document.getElementById('stat-use').textContent = '—';
-  document.getElementById('stat-psnr').textContent = '—';
+  document.getElementById('stat-changes').textContent = 'Not calculated';
+  document.getElementById('stat-use').textContent = 'Not calculated';
+  document.getElementById('stat-psnr').textContent = 'Not calculated';
 
   const logEntries = [
-    { n: '🔍', t: `Extraction Mode: <span class="hl-cyan">${data.algo_label}</span>` },
-    { n: '📊', t: `Total Bits Read: <span class="hl">${data.bits_read.toLocaleString()}</span>` },
-    { n: '—', t: `<div class="log-divider"></div>` },
-    { n: '1', t: `Delimiter Check: ${data.delimiter_found ? '<span class="hl-green">FOUND ✓ (Valid Payload)</span>' : '<span class="hl-rose">NOT FOUND ⚠️ (Wrong key or carrier without secret)</span>'}` },
-    { n: '2', t: `Recovered Length: <span class="hl">${data.msg_length} characters</span>` },
-    { n: '—', t: `<div class="log-divider"></div>` },
-    { n: '✓', t: `Decoded Payload: <span class="hl-green">"${escapeHtml(data.message)}"</span>` }
+    { n: '01', t: `Extraction mode: <span class="hl-cyan">${data.algo_label}</span>` },
+    { n: '02', t: `Total bits read: <span class="hl">${data.bits_read.toLocaleString()}</span>` },
+    { n: '03', t: `Delimiter check: ${data.delimiter_found ? '<span class="hl-green">Found (valid payload)</span>' : '<span class="hl-rose">Not found (check the key or source image)</span>'}` },
+    { n: '04', t: `Recovered length: <span class="hl">${data.msg_length} characters</span>` },
+    { n: 'DONE', t: `Decoded payload: <span class="hl-green">"${escapeHtml(data.message)}"</span>` }
   ];
   renderLogEntries(logEntries);
 
@@ -328,7 +323,7 @@ function renderDecodeResults(data) {
   renderExtractionTable(data.extraction_log);
 
   document.getElementById('decodedMessageBox').textContent = data.message || '(Empty message)';
-  document.getElementById('decodedMetaStats').textContent = `${data.bits_read.toLocaleString()} bits read · ${data.msg_length} characters recovered · Delimiter: ${data.delimiter_found ? 'Valid' : 'Unmatched'}`;
+  document.getElementById('decodedMetaStats').textContent = `${data.bits_read.toLocaleString()} bits read - ${data.msg_length} characters recovered - Delimiter: ${data.delimiter_found ? 'Valid' : 'Unmatched'}`;
   document.getElementById('decodedMsgCard').style.display = 'block';
   document.getElementById('stegoImgCard').style.display = 'none';
   document.getElementById('outputStudio').style.display = 'flex';
@@ -356,7 +351,7 @@ function renderErrorLog(errMsg) {
   stream.style.display = 'block';
   stream.innerHTML = `
     <div class="log-entry">
-      <span class="log-bullet">✕</span>
+      <span class="log-bullet">ERROR</span>
       <div class="log-text"><span class="hl-rose">Execution Error: ${escapeHtml(errMsg)}</span></div>
     </div>
   `;
@@ -409,7 +404,7 @@ function renderPixelMatrix(pixels, total) {
         <td>${rBin}</td>
         <td>${gBin}</td>
         <td>${bBin}</td>
-        <td><span class="${p.changed ? 'hl-rose' : 'diff-zero'}">${p.changed ? '★ MODIFIED' : '· unchanged'}</span></td>
+        <td><span class="${p.changed ? 'hl-rose' : 'diff-zero'}">${p.changed ? 'MODIFIED' : 'UNCHANGED'}</span></td>
       </tr>
     `;
   }).join('');
@@ -536,7 +531,7 @@ function clearVisualization() {
   document.getElementById('btnDownloadResult').style.display = 'none';
 
   ['stat-msg', 'stat-bits', 'stat-changes', 'stat-use', 'stat-psnr'].forEach(id => {
-    document.getElementById(id).textContent = '—';
+    document.getElementById(id).textContent = 'Not calculated';
   });
 }
 
@@ -563,7 +558,7 @@ function copyDecodedMessage() {
 }
 
 function showSpinner(message) {
-  document.getElementById('loadingMsg').textContent = message || 'Processing Image…';
+  document.getElementById('loadingMsg').textContent = message || 'Processing image';
   document.getElementById('loadingOverlay').style.display = 'flex';
   document.getElementById('btnExecuteEncode').disabled = true;
   document.getElementById('btnExecuteDecode').disabled = true;
